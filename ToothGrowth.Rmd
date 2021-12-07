@@ -1,0 +1,152 @@
+---
+title: "Analysis of ToothGrowth dataset related to Dosage and Supplements"
+author: "Jay Yanamandala"
+date: "October 16, 2021"
+output:
+  html_document: default
+  pdf_document: default
+  toc: true
+---
+### Overview
+I will use 't.test' to analyze confidence intervals and hypothesis tests to 
+compare tooth growth by supp and  dose.
+
+### Load ToothGrowth data and perform some basic exploratory data analyses
+```{r}
+library(datasets)
+data(ToothGrowth)
+tg <- ToothGrowth
+```
+---
+### A basic summary of the data.
+Dimensions of ToothGrowth data set: **`r dim(tg)`**  
+Columns names of ToothGrowth data set: **`r names(tg)`**  
+
+```{r}
+str(tg)
+```
+  
+Table Summary for Tooth Growth dose and supplement:
+```{r table-summary}
+table(tg$dose, tg$supp)
+```
+
+### Tooth Growth - boxplot
+```{r}
+library(ggplot2)
+g <- ggplot(tg, aes(x=factor(dose), y=len, fill=supp))
+g + geom_boxplot() + 
+  ggtitle("Tooth Growth based of Dosage of Type of Supplements used") +
+  ylab("Lenght of tooth") + xlab("Dosage") +
+  theme(legend.position = "bottom") +
+  scale_fill_discrete("Supplement")
+```
+
+From the boxplot we can observe that the dosage for 0.5 and 1.0 have bigger differences in length
+compared to the other dosages. As dosage increases, length of tooth increases. Of the two supplements
+OJ seems to have more effect on tooth growth than VC  
+  
+We can look at the mean for the length of tooth growth for each dose and supp.  
+
+```{r echo=FALSE, warnings=FALSE, message=FALSE}
+library(dplyr)
+library(tidyr)
+```
+
+```{r warnings=FALSE, message=FALSE}
+tg %>% 
+  group_by(dose, supp) %>%
+  arrange(as.factor(dose), supp) %>%
+  summarize(mean = mean(len)) %>%
+  spread(supp, mean) %>%
+  mutate("VC-OJ"=abs(VC - OJ))
+  
+```
+
+Observing the differences between supplement OJ and VC, we see that 2mg/day doses 
+has very small differences as compared to dosages; 0.5 and 1. 
+This means it's harder to compare the effectiveness between OJ and VC for 2mg/day.     
+
+To test effectiveness between the two supplement types, we will 
+use t.test to find the p-values and confidence intervals to 
+perform hypothesis testing.    
+
+
+**t.test Hypothesis Testing**  
+  
+* Our null hypothesis would is there would be no difference between using OJ and VC  
+* Our alternative hypothesis is there is a difference between sign OJ and VC  
+* alpha rate is set at 0.05 as standard  
+  
+For hypothesis test, we will filter the dataset on dosage  
+
+```{r}
+dosage_half <- tg %>% filter(dose == 0.5)
+dosage_one <- tg %>% filter(dose == 1)
+dosage_two <- tg %>% filter(dose == 2)
+```
+
+sort by 'dose' and then by 'supplement'
+```{r}
+dosage_half <- dosage_half[order(dosage_one$dose, dosage_one$supp), ]
+# dosage_half
+```
+
+```{r}
+dosage_one <- dosage_one[order(dosage_one$dose, dosage_one$supp), ]
+# dosage_one
+```
+
+```{r}
+dosage_two <- dosage_two[order(dosage_one$dose, dosage_one$supp), ]
+# dosage_two
+```
+
+When dosage is '1mg/day' when using supplement 'OJ' tooth growth was biggest  
+When dosage is '2mg/day', the trend starts to reverse -  
+supplement 'VC' seem to gain on 'OJ" but result is conclusive 
+since we don't have data past two dosages  
+
+Some information on Welchs t-test [daniellakens blogspot](https://daniellakens.blogspot.com/2015/01/always-use-welchs-t-test-instead-of.html)  
+[From Berkley EDU(https://statistics.berkeley.edu/computing/r-t-tests)
+```{r}
+### t-test for 0.5 mg/day dose
+t.test(len ~ supp, dosage_half)
+```
+
+```{r}
+###  t-test for 1 mg/day dose
+t.test(len ~ supp, dosage_one)
+```
+
+```{r}
+###  t-test for 2 mg/day dose
+t.test(len ~ supp, dosage_two)
+```
+
+\pagebreak
+
+# Assumptions
+The central assumption for the results is that the sample is representative of the 
+population, and the variables are IID random variables.  
+For the t.test, two assumptions are made,  
+1. The data isn't paired, meaning they're independent  
+2. The variance are different.  
+ 
+Normally, whenever p-value is less than 0 .05, the null hypothesis has a  
+significantly low probability of being false.  
+
+Thus, for dose 0.5 and 1.0, since p-values are smaller than 0.5, we reject the 
+null hypotheses that the supplement types don't have a difference on tooth growth. 
+But for dose 2.0 mg/day.
+
+With that, in reviewing the t.test, supplement type OC are more effective than VC 
+for doses less than 1.0mg/day. But for dose at 2.0 mg/day, 
+there is no difference between the supplement types.  
+
+# Conclusion
+The p-value associated with the test 'dosage_two' is 0.9638516, 
+so we cannot reject the null hypothesis (H0) of no difference between the 
+(true) averages of the two groups. Since the p-value is greater than the usual 
+significance level alpha = 0.05
+
